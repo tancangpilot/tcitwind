@@ -30,6 +30,7 @@
 
     <canvas id="windChart" class="w-full h-48"></canvas>
 
+    <div class="text-center text-xs text-gray-400">🔁 Auto refresh in 10s</div>
     <div id="info" class="text-center text-sm text-gray-500">
       Đang tải dữ liệu...
     </div>
@@ -124,7 +125,7 @@ dirDeg = (dirDeg + 180) % 360; // wind coming from
     document.getElementById('windKnots').innerText = knots.toFixed(1);
     document.getElementById('windDirection').innerText = direction;
     document.getElementById('arrow').style.transform = `rotate(${(dirDeg + 180) % 360}deg)`; // point to wind coming from
-    document.getElementById('info').innerText = `✅ Dữ liệu cập nhật lúc (auto refresh in 10s): ${now}`;
+    document.getElementById('info').innerText = `✅ Dữ liệu cập nhật lúc: ${now}`;
 
     labels.push(now);
     windData.push(speed);
