@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Gió tại cảng Cái Mép</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .arrow {
+      display: inline-block;
+      transition: transform 0.3s;
+    }
+  </style>
+</head>
+<body class="bg-blue-50 p-4">
+  <div class="max-w-md mx-auto bg-white rounded-xl shadow p-6 space-y-4">
+    <h1 class="text-2xl font-bold text-center text-blue-700">🌬️ Gió tại cảng Cái Mép</h1>
+
+    <div class="text-center text-gray-700 text-lg">
+      🌪️ <span class="font-semibold">Tốc độ gió:</span>
+      <span id="windSpeed" class="font-bold">--</span> m/s (<span id="windKnots">--</span> knots)
+    </div>
+
+    <div class="text-center text-gray-700 text-lg">
+      🧭 <span class="font-semibold">Hướng gió:</span>
+      <span id="windDirection">--</span>
+      <span class="arrow" id="arrow">⬆️</span>
+    </div>
+
+    <canvas id="windChart" class="w-full h-48"></canvas>
+
+    <div id="info" class="text-center text-sm text-gray-500">
+      Đang tải dữ liệu...
+    </div>
+  </div>
+
+<script>
+const windSpeedUrl = "https://webapi.ubibot.com/channels/65717?account_key=52389a10003fb9b280cb3b47f86a21b5";
+const windDirUrl   = "https://webapi.ubibot.com/channels/72880?account_key=52389a10003fb9b280cb3b47f86a21b5";
+const windHistoryUrl = "https://webapi.ubibot.com/channels/65717/feeds?account_key=52389a10003fb9b280cb3b47f86a21b5&field9&days=1";
+
+function getCompassDirection(degree) {
+  const dirs = ['Bắc', 'Bắc Đông Bắc', 'Đông Bắc', 'Đông Đông Bắc',
+                'Đông', 'Đông Đông Nam', 'Đông Nam', 'Nam Đông Nam',
+                'Nam', 'Nam Tây Nam', 'Tây Nam', 'Tây Tây Nam',
+                'Tây', 'Tây Tây Bắc', 'Tây Bắc', 'Bắc Tây Bắc'];
+  const index = Math.round(degree / 22.5) % 16;
+  return `${dirs[index]} (${degree.toFixed(1)}°)`;
+}
+
+function getBeaufortLevel(speed) {
+  if (speed < 0.3) return { level: 0, color: 'text-gray-600' };
+  if (speed < 1.6) return { level: 1, color: 'text-green-600' };
+  if (speed < 3.4) return { level: 2, color: 'text-lime-600' };
+  if (speed < 5.5) return { level: 3, color: 'text-yellow-500' };
+  if (speed < 8.0) return { level: 4, color: 'text-orange-500' };
+  if (speed < 10.8) return { level: 5, color: 'text-amber-600' };
+  if (speed < 13.9) return { level: 6, color: 'text-red-500' };
+  if (speed < 17.2) return { level: 7, color: 'text-red-600' };
+  if (speed < 20.8) return { level: 8, color: 'text-rose-600' };
+  return { level: 9, color: 'text-rose-800 font-bold' };
+}
+
+const labels = [];
+const windData = [];
+const chartCtx = document.getElementById('windChart').getContext('2d');
+const chart = new Chart(chartCtx, {
+  type: 'line',
+  data: {
+    labels: labels,
+    datasets: [{
+      label: 'Tốc độ gió (m/s)',
+      data: windData,
+      borderColor: 'rgb(59, 130, 246)',
+      backgroundColor: 'rgba(59, 130, 246, 0.2)',
+      borderWidth: 2,
+      fill: true,
+      tension: 0.3
+    }]
+  },
+  options: {
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: 'm/s'
+        }
+      },
+      x: {
+        title: {
+          display: true,
+          text: 'Thời gian'
+        }
+      }
+    }
+  }
+});
+
+async function fetchData() {
+  try {
+    const res1 = await fetch(windSpeedUrl);
+    const json1 = await res1.json();
+    const last1 = JSON.parse(json1.channel.last_values);
+    const rawSpeed = parseFloat(last1.field9.value);
+    const speed = rawSpeed * 1.5;
+    const knots = speed * 1.94384;
+
+    const res2 = await fetch(windDirUrl);
+    const json2 = await res2.json();
+    const last2 = JSON.parse(json2.channel.last_values);
+    let dirDeg = parseFloat(last2.field8.value);
+dirDeg = (dirDeg + 180) % 360; // wind coming from
+    
+    const direction = getCompassDirection(dirDeg);
+
+    const now = new Date().toLocaleTimeString();
+    const windElem = document.getElementById('windSpeed');
+    const level = getBeaufortLevel(speed);
+
+    windElem.innerText = speed.toFixed(1);
+    windElem.className = level.color;
+    document.getElementById('windKnots').innerText = knots.toFixed(1);
+    document.getElementById('windDirection').innerText = direction;
+    document.getElementById('arrow').style.transform = `rotate(${(dirDeg + 180) % 360}deg)`; // point to wind coming from
+    document.getElementById('info').innerText = `✅ Dữ liệu cập nhật lúc (auto refresh in 10s): ${now}`;
+
+    labels.push(now);
+    windData.push(speed);
+    if (labels.length > 20) {
+      labels.shift();
+      windData.shift();
+    }
+    chart.update();
+  } catch (err) {
+    document.getElementById('info').innerText = "❌ Lỗi khi gọi API: " + err.message;
+    console.error("Chi tiết lỗi:", err);
+  }
+}
+
+async function fetchHistory() {
+  try {
+    const res = await fetch(windHistoryUrl);
+    const json = await res.json();
+    if (json.result === "success" && Array.isArray(json.feeds)) {
+      json.feeds.forEach(feed => {
+        const time = new Date(feed.created_at).toLocaleTimeString();
+        const val = parseFloat(feed.field9);
+        if (!isNaN(val)) {
+          labels.push(time);
+          windData.push(val * 1.5);
+        }
+      });
+      chart.update();
+    }
+  } catch (err) {
+    console.error("Lỗi khi tải lịch sử biểu đồ:", err);
+  }
+}
+
+fetchHistory();
+fetchData();
+setInterval(fetchData, 10000);
+</script>
+</body>
+</html>
