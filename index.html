@@ -105,7 +105,7 @@ async function fetchData() {
     const json1 = await res1.json();
     const last1 = JSON.parse(json1.channel.last_values);
     const rawSpeed = parseFloat(last1.field9.value);
-    const speed = rawSpeed * 1.5;
+    const speed = rawSpeed * 1.8; //tốc độ gió tăng lên 1.8 lần so với data từ sensor.
     const knots = speed * 1.94384;
 
     const res2 = await fetch(windDirUrl);
