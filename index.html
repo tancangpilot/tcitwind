@@ -2,10 +2,10 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Gió tại cảng Cái Mép</title>
+  <title>Gió tại cảng TCIT (CM3) & TCTT (CM4)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     .arrow {
       display: inline-block;
@@ -14,32 +14,61 @@
   </style>
 </head>
 <body class="bg-blue-50 p-4">
-  <div class="max-w-md mx-auto bg-white rounded-xl shadow p-6 space-y-4">
-    <h1 class="text-2xl font-bold text-center text-blue-700">🌬️ Gió tại cảng Cái Mép</h1>
+  <div class="max-w-3xl mx-auto bg-white rounded-xl shadow p-6 space-y-6">
+    <h1 class="text-2xl font-bold text-center text-blue-700">
+      🛳️ Gió tại cảng <span class="text-blue-800">TCIT (CM3)</span> & <span class="text-blue-800">TCTT (CM4)</span>
+    </h1>
 
-    <div class="text-center text-gray-700 text-lg">
-      🌪️ <span class="font-semibold">Tốc độ gió:</span>
-      <span id="windSpeed" class="font-bold">--</span> m/s (<span id="windKnots">--</span> knots)
+    <!-- CM3 -->
+    <div>
+      <h2 class="text-xl font-semibold text-blue-600 text-center">CM3 - TCIT</h2>
+      <div class="text-center text-gray-700 text-lg">
+        🌪️ <span class="font-semibold">Tốc độ gió:</span>
+        <span id="windSpeedCM3" class="font-bold">--</span> m/s (<span id="windKnotsCM3">--</span> knots)
+      </div>
+      <div class="text-center text-gray-700 text-lg">
+        🧭 <span class="font-semibold">Hướng gió:</span>
+        <span id="windDirectionCM3">--</span>
+        <span class="arrow" id="arrowCM3">⬆️</span>
+      </div>
+      <canvas id="windChartCM3" class="w-full h-48"></canvas>
     </div>
 
-    <div class="text-center text-gray-700 text-lg">
-      🧭 <span class="font-semibold">Hướng gió:</span>
-      <span id="windDirection">--</span>
-      <span class="arrow" id="arrow">⬆️</span>
+    <!-- CM4 -->
+    <div>
+      <h2 class="text-xl font-semibold text-blue-600 text-center">CM4 - TCTT</h2>
+      <div class="text-center text-gray-700 text-lg">
+        🌪️ <span class="font-semibold">Tốc độ gió:</span>
+        <span id="windSpeedCM4" class="font-bold">--</span> m/s (<span id="windKnotsCM4">--</span> knots)
+      </div>
+      <div class="text-center text-gray-700 text-lg">
+        🧭 <span class="font-semibold">Hướng gió:</span>
+        <span id="windDirectionCM4">--</span>
+        <span class="arrow" id="arrowCM4">⬆️</span>
+      </div>
+      <canvas id="windChartCM4" class="w-full h-48"></canvas>
     </div>
-
-    <canvas id="windChart" class="w-full h-48"></canvas>
 
     <div class="text-center text-xs text-gray-400">🔁 Auto refresh in 10s</div>
-    <div id="info" class="text-center text-sm text-gray-500">
-      Đang tải dữ liệu...
-    </div>
+    <div id="info" class="text-center text-sm text-gray-500">Đang tải dữ liệu...</div>
   </div>
 
 <script>
-const windSpeedUrl = "https://webapi.ubibot.com/channels/65717?account_key=52389a10003fb9b280cb3b47f86a21b5";
-const windDirUrl   = "https://webapi.ubibot.com/channels/72880?account_key=52389a10003fb9b280cb3b47f86a21b5";
-const windHistoryUrl = "https://webapi.ubibot.com/channels/65717/feeds?account_key=52389a10003fb9b280cb3b47f86a21b5&field9&days=1";
+const cm3 = {
+  speedUrl: "https://webapi.ubibot.com/channels/72158?account_key=8fbe832ef652822c81af5418b0d243f2",
+  dirUrl:   "https://webapi.ubibot.com/channels/72158?account_key=8fbe832ef652822c81af5418b0d243f2",
+  speedField: "field7",
+  dirField: "field8",
+  correctDirection: false
+};
+
+const cm4 = {
+  speedUrl: "https://webapi.ubibot.com/channels/65717?account_key=52389a10003fb9b280cb3b47f86a21b5",
+  dirUrl:   "https://webapi.ubibot.com/channels/72880?account_key=52389a10003fb9b280cb3b47f86a21b5",
+  speedField: "field9",
+  dirField: "field8",
+  correctDirection: true
+};
 
 function getCompassDirection(degree) {
   const dirs = ['Bắc', 'Bắc Đông Bắc', 'Đông Bắc', 'Đông Đông Bắc',
@@ -63,106 +92,87 @@ function getBeaufortLevel(speed) {
   return { level: 9, color: 'text-rose-800 font-bold' };
 }
 
-const labels = [];
-const windData = [];
-const chartCtx = document.getElementById('windChart').getContext('2d');
-const chart = new Chart(chartCtx, {
-  type: 'line',
-  data: {
-    labels: labels,
-    datasets: [{
-      label: 'Tốc độ gió (m/s)',
-      data: windData,
-      borderColor: 'rgb(59, 130, 246)',
-      backgroundColor: 'rgba(59, 130, 246, 0.2)',
-      borderWidth: 2,
-      fill: true,
-      tension: 0.3
-    }]
-  },
-  options: {
-    scales: {
-      y: {
-        beginAtZero: true,
-        title: {
-          display: true,
-          text: 'm/s'
-        }
-      },
-      x: {
-        title: {
-          display: true,
-          text: 'Thời gian'
-        }
+function initChart(ctxId) {
+  return new Chart(document.getElementById(ctxId).getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'Tốc độ gió (m/s)',
+        data: [],
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: 'm/s' }},
+        x: { title: { display: true, text: 'Thời gian' }}
       }
     }
-  }
-});
+  });
+}
 
-async function fetchData() {
+const chartCM3 = initChart('windChartCM3');
+const chartCM4 = initChart('windChartCM4');
+
+async function fetchWindData(station, chart, idSuffix) {
   try {
-    const res1 = await fetch(windSpeedUrl);
+    const [res1, res2] = await Promise.all([
+      fetch(station.speedUrl),
+      fetch(station.dirUrl)
+    ]);
     const json1 = await res1.json();
+    const json2 = await res2.json();
+
     const last1 = JSON.parse(json1.channel.last_values);
-    const rawSpeed = parseFloat(last1.field9.value);
-    const speed = rawSpeed * 1.8; //tốc độ gió tăng lên 1.8 lần so với data từ sensor.
+    const last2 = JSON.parse(json2.channel.last_values);
+
+    if (!last1[station.speedField] || !last2[station.dirField]) {
+      throw new Error("Thiếu dữ liệu từ sensor (field không tồn tại)");
+    }
+
+    const rawSpeed = parseFloat(last1[station.speedField].value);
+    const speed = rawSpeed * 1.8;
     const knots = speed * 1.94384;
 
-    const res2 = await fetch(windDirUrl);
-    const json2 = await res2.json();
-    const last2 = JSON.parse(json2.channel.last_values);
-    let dirDeg = parseFloat(last2.field8.value);
-dirDeg = (dirDeg + 180) % 360; // wind coming from
-    
-    const direction = getCompassDirection(dirDeg);
+    let dirDeg = parseFloat(last2[station.dirField].value);
+    if (station.correctDirection) dirDeg = (dirDeg + 180) % 360;
 
     const now = new Date().toLocaleTimeString();
-    const windElem = document.getElementById('windSpeed');
     const level = getBeaufortLevel(speed);
 
-    windElem.innerText = speed.toFixed(1);
-    windElem.className = level.color;
-    document.getElementById('windKnots').innerText = knots.toFixed(1);
-    document.getElementById('windDirection').innerText = direction;
-    document.getElementById('arrow').style.transform = `rotate(${(dirDeg + 180) % 360}deg)`; // point to wind coming from
-    document.getElementById('info').innerText = `✅ Dữ liệu cập nhật lúc: ${now}`;
+    document.getElementById(`windSpeed${idSuffix}`).innerText = speed.toFixed(1);
+    document.getElementById(`windSpeed${idSuffix}`).className = level.color;
+    document.getElementById(`windKnots${idSuffix}`).innerText = knots.toFixed(1);
+    document.getElementById(`windDirection${idSuffix}`).innerText = getCompassDirection(dirDeg);
+    document.getElementById(`arrow${idSuffix}`).style.transform = `rotate(${(dirDeg + 180) % 360}deg)`;
 
-    labels.push(now);
-    windData.push(speed);
-    if (labels.length > 20) {
-      labels.shift();
-      windData.shift();
+    chart.data.labels.push(now);
+    chart.data.datasets[0].data.push(speed);
+    if (chart.data.labels.length > 20) {
+      chart.data.labels.shift();
+      chart.data.datasets[0].data.shift();
     }
     chart.update();
+
+    document.getElementById('info').innerText = `✅ Dữ liệu cập nhật lúc: ${now}`;
   } catch (err) {
     document.getElementById('info').innerText = "❌ Lỗi khi gọi API: " + err.message;
     console.error("Chi tiết lỗi:", err);
   }
 }
 
-async function fetchHistory() {
-  try {
-    const res = await fetch(windHistoryUrl);
-    const json = await res.json();
-    if (json.result === "success" && Array.isArray(json.feeds)) {
-      json.feeds.forEach(feed => {
-        const time = new Date(feed.created_at).toLocaleTimeString();
-        const val = parseFloat(feed.field9);
-        if (!isNaN(val)) {
-          labels.push(time);
-          windData.push(val * 1.5);
-        }
-      });
-      chart.update();
-    }
-  } catch (err) {
-    console.error("Lỗi khi tải lịch sử biểu đồ:", err);
-  }
+function fetchAll() {
+  fetchWindData(cm3, chartCM3, "CM3");
+  fetchWindData(cm4, chartCM4, "CM4");
 }
 
-fetchHistory();
-fetchData();
-setInterval(fetchData, 10000);
+fetchAll();
+setInterval(fetchAll, 10000);
 </script>
 </body>
 </html>
