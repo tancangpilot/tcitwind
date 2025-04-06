@@ -20,16 +20,17 @@
   <div class="max-w-3xl mx-auto bg-white rounded-xl shadow p-6 space-y-6">
     <!-- CM3 + CM4 Combined Display -->
     <div>
-      <h2 class="text-xl font-semibold text-blue-600 text-center">TCIT (CM3) & TCTT (CM4) Wind Data</h2>
+      <!--<h2 class="text-xl font-semibold text-blue-600 text-center">TCIT (CM3) & TCTT (CM4) Wind Data</h2>-->
+      <h2 class="text-xl font-semibold text-blue-600 text-center">Wind Data</h2>
       <p class="text-center text-sm text-red-500 mt-1">Wind data is real-time because of syncing from wind-sensor in port area.</p>
       <div class="flex flex-col sm:flex-row justify-around gap-4">
         <div class="text-center text-gray-700 text-lg">
-          <div class="font-semibold">🌪️ CM3 Wind Sped:</div>
+          <div class="font-semibold">🌪️ TCIT-CM3</div>
           <span id="windSpeedCM3" class="font-bold">--</span> m/s (<span id="windKnotsCM3">--</span> knots)
           <div class="mt-1">🧭 <span id="windDirectionCM3">--</span> <span class="arrow" id="arrowCM3">⬆️</span></div>
         </div>
         <div class="text-center text-gray-700 text-lg">
-          <div class="font-semibold">🌪️ CM4 Wind Sped:</div>
+          <div class="font-semibold">🌪️ TCTT-CM4</div>
           <span id="windSpeedCM4" class="font-bold">--</span> m/s (<span id="windKnotsCM4">--</span> knots)
           <div class="mt-1">🧭 <span id="windDirectionCM4">--</span> <span class="arrow" id="arrowCM4">⬆️</span></div>
         </div>
@@ -43,7 +44,7 @@
 
     <!-- Open Meteo Forecast -->
     <div>
-      <h2 class="text-xl font-semibold text-green-600 text-center">Wind Forecast within 24H - Open Meteo</h2>
+      <h2 class="text-xl font-semibold text-green-600 text-center">Wind Forecast 24H - Open Meteo</h2>
       <canvas id="openMeteoChart" class="w-full h-64"></canvas>
       <div class="text-center text-xs text-gray-400 mt-2">
         🔁 Auto refresh in 10s<br>
@@ -70,7 +71,7 @@ const cm4 = {
 };
 
 function getCompassDirection(degree) {
-  const dirs = ['Bắc', 'Bắc Đông Bắc', 'Đông Bắc', 'Đông Đông Bắc', 'Đông', 'Đông Đông Nam', 'Đông Nam', 'Nam Đông Nam', 'Nam', 'Nam Tây Nam', 'Tây Nam', 'Tây Tây Nam', 'Tây', 'Tây Tây Bắc', 'Tây Bắc', 'Bắc Tây Bắc'];
+  const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   const index = Math.round(degree / 22.5) % 16;
   return `${dirs[index]} (${degree.toFixed(1)}°)`;
 }
@@ -175,7 +176,7 @@ function fetchWindData(station, suffix, datasetIndex) {
     .then(json => {
       const last = JSON.parse(json.channel.last_values);
       const rawSpeed = parseFloat(last[station.speedField].value);
-      const speed = rawSpeed * 1.68;
+      const speed = rawSpeed * 1.85;
       const knots = speed * 1.94384;
       const now = new Date().toLocaleTimeString();
       const levelColor = getBeaufortColor(speed);
